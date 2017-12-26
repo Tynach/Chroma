@@ -67,22 +67,22 @@ function draw() {
 	const dispRes = [gl.canvas.width, gl.canvas.height];
 	const vao = gl.createVertexArray();
 
-	var from = document.querySelector("#from");
-	var to = document.querySelector("#to");
+	let from = document.querySelector("#from").elements;
+	let to = document.querySelector("#to").elements;
 
 	state.from.primaries = primaries(
-		from[1].value, from[3].value,
-		from[5].value, from[7].value,
-		from[9].value, from[11].value
+		from["redxn"].value, from["redyn"].value,
+		from["greenxn"].value, from["greenyn"].value,
+		from["bluexn"].value, from["blueyn"].value
 	);
-	state.from.white = chromaCoords(from[13].value, from[15].value);
+	state.from.white = chromaCoords(from["whitexn"].value, from["whiteyn"].value);
 
 	state.to.primaries = primaries(
-		to[1].value, to[3].value,
-		to[5].value, to[7].value,
-		to[9].value, to[11].value
+		to["redxn"].value, to["redyn"].value,
+		to["greenxn"].value, to["greenyn"].value,
+		to["bluexn"].value, to["blueyn"].value
 	);
-	state.to.white = chromaCoords(to[13].value, to[15].value);
+	state.to.white = chromaCoords(to["whitexn"].value, to["whiteyn"].value);
 
 	ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
