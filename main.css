@@ -28,6 +28,7 @@ label.controls {
 div.input {
 	display: inline-block;
 	margin-right: 1em;
+	padding-left: 0.25em;
 	width: calc(50% - 2em);
 	vertical-align: top;
 }
