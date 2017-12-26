@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<head>
+<title>Chromaticity Diagram</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="colorspace.js" type="text/javascript"></script>
+<script src="form.js" type="text/javascript"></script>
+<script src="main.js" type="text/javascript"></script>
+<script id="vertex" type="x-shader/x-vertex">#version 300 es
+precision highp float;
+
+in vec4 vertex;
+
+void main()
+{
+	gl_Position = vertex;
+}
+</script>
+<script id="fragment" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+
+struct transfer {
+	float power;
+	float off;
+	float slope;
+	float toLinCutoff;
+	float toGamCutoff;
+};
+
+struct rgb_space {
+	mat3 primaries;
+	vec3 white;
+	transfer trc;
+};
+
+out vec4 fragColor;
+uniform vec2 dispRes;
+uniform sampler2D lines;
+
+uniform rgb_space from;
+uniform rgb_space to;
+
+
+#define \
+diag(v)\
+	mat3(\
+		v.x, 0.0, 0.0,\
+		0.0, v.y, 0.0,\
+		0.0, 0.0, v.z)
+
+// Creates a conversion matrix that turns RGB colors into XYZ colors
+#define \
+rgbToXyz(space)\
+	space.primaries*diag((inverse(space.primaries)*(space.white/space.white.y)))
+
+// Creates a conversion matrix that turns XYZ colors into RGB colors
+#define \
+xyzToRgb(space)\
+	inverse(rgbToXyz(space))
+
+// Creates a conversion matrix converts linear RGB colors from one colorspace to another
+#define \
+conversionMatrix(f, t)\
+	xyzToRgb(t)*rgbToXyz(f)
+
+vec4 toLinear(vec4 color, transfer trc)
+{
+	bvec4 cutoff = lessThan(color, vec4(trc.toLinCutoff));
+	bvec4 negCutoff = lessThanEqual(color, vec4(-1.0*trc.toLinCutoff));
+	vec4 higher = pow((color + trc.off)/(1.0 + trc.off), vec4(trc.power));
+	vec4 lower = color/trc.slope;
+	vec4 neg = -1.0*pow((color - trc.off)/(-1.0 - trc.off), vec4(trc.power));
+
+	color = mix(higher, lower, cutoff);
+	color = mix(color, neg, negCutoff);
+
+	return color;
+}
+
+vec4 toGamma(vec4 color, transfer trc)
+{
+	bvec4 cutoff = lessThan(color, vec4(trc.toGamCutoff));
+	bvec4 negCutoff = lessThanEqual(color, vec4(-1.0*trc.toGamCutoff));
+	vec4 higher = (1.0 + trc.off)*pow(color, vec4(1.0/trc.power)) - trc.off;
+	vec4 lower = color*trc.slope;
+	vec4 neg = (-1.0 - trc.off)*pow(-1.0*color, vec4(1.0/trc.power)) + trc.off;
+
+	color = mix(higher, lower, cutoff);
+	color = mix(color, neg, negCutoff);
+
+	return color;
+}
+
+vec4 convert(vec4 color)
+{
+	const float pnorm = 5.0;
+	mat3 toRGB = xyzToRgb(from);
+	mat3 conv = conversionMatrix(from, to);
+
+	// Wikipedia's description for one of their chromaticity diagrams claims
+	// that the top left should have more cyan than most charts do. This
+	// is solved by scaling out-of-gamut colors to be in-gamut
+
+	// Gammut scaling; percepptual colorimetric intent
+	/*vec3 edge;
+	vec3 point;
+	vec3 tow = to.white - color.xyz;
+	vec3 flipped;
+	float factor = 0.0;
+
+	// Just makes it shorter to refer to the primaries
+	mat3 pri = to.primaries;
+
+	if
+	(cross(pri[0] - to.white, color.xyz - to.white).z > 0.0 &&
+	 cross(pri[1] - to.white, color.xyz - to.white).z <= 0.0) {
+		edge = pri[1] - pri[0];
+		point = pri[0];
+		flipped = vec3(-edge.y, edge.x, 1.0 - edge.x + edge.y);
+		factor = dot((pri[0].xy - color.xy), flipped.xy)/dot(tow.xy, flipped.xy);
+	} else if
+	(cross(pri[1] - to.white, color.xyz - to.white).z > 0.0 &&
+	 cross(pri[2] - to.white, color.xyz - to.white).z <= 0.0) {
+		edge = pri[2] - pri[1];
+		point = pri[1];
+		flipped = vec3(-edge.y, edge.x, 1.0 - edge.x + edge.y);
+		factor = dot((pri[1].xy - color.xy), flipped.xy)/dot(tow.xy, flipped.xy);
+	} else if
+	(cross(pri[2] - to.white, color.xyz - to.white).z > 0.0 &&
+	 cross(pri[0] - to.white, color.xyz - to.white).z <= 0.0) {
+		edge = pri[0] - pri[2];
+		point = pri[2];
+		flipped = vec3(-edge.y, edge.x, 1.0 - edge.x + edge.y);
+		factor = dot((pri[2].xy - color.xy), flipped.xy)/dot(tow.xy, flipped.xy);
+	}
+
+	if (cross(edge, color.xyz - point).z > 0.0) {
+		factor = 0.0;
+	}
+
+	// If in-gamut, 'factor' is 0.0; set z channel
+	color.xy += tow.xy*factor;*/
+	color.z = 1.0 - color.x - color.y;
+
+	// Convert from xyY to XYZ, then RGB
+	color.xyz /= color.y;
+	color.rgb = toRGB*color.xyz;
+
+	float low = min(color.r, min(color.g, min(color.b, 0.0)));
+	color.rgb = 1.0 + (1.0 - color.rgb)/(low - 1.0);
+	//color.rgb /= max(color.r, max(color.g, max(color.b, 1.0)));
+	//color.rgb /= pow(dot(pow(abs(color.rgb), vec3(pnorm)), vec3(1.0)), 1.0/pnorm);
+
+	color.rgb = conv*color.rgb;
+
+	low = min(color.r, min(color.g, min(color.b, 0.0)));
+	color.rgb = 1.0 + (1.0 - color.rgb)/(low - 1.0);
+	//color.rgb /= max(color.r, max(color.g, max(color.b, 1.0)));
+	color.rgb /= pow(dot(pow(abs(color.rgb), vec3(pnorm)), vec3(1.0)), 1.0/pnorm);
+
+	return color;
+}
+
+void main()
+{
+	const vec2 bounds = vec2(0.8, 0.9);
+	fragColor.xy = gl_FragCoord.xy*bounds.y/dispRes.y;
+	fragColor.x -= (bounds.y*dispRes.x/dispRes.y - bounds.x)/2.0;
+	fragColor.z = 1.0 - fragColor.x - fragColor.y;
+	fragColor.a = 1.0;
+
+	fragColor = convert(fragColor);
+
+	vec4 texColor = texture(lines, gl_FragCoord.xy/dispRes);
+
+	fragColor.rgb = texColor.a*texColor.rgb + (1.0 - texColor.a)*fragColor.rgb;
+	fragColor = toGamma(fragColor, to.trc);
+}
+</script>
+<link rel="stylesheet" href="main.css" type="text/css">
+<body>
+	<main>
+		<canvas id="glCanvas" width="400" height="450"></canvas>
+		<form id="from">
+			<h2>From colorspace</h2>
+			<div class="coordinates">
+				<p>Red</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="redxn" min="0" max="0.8" step="any">
+						<input type="range" name="redxr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="redyn" min="0" max="0.9" step="any">
+						<input type="range" name="redyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+			<div class="coordinates">
+				<p>Green</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="greenxn" min="0" max="0.8" step="any">
+						<input type="range" name="greenxr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="greenyn" min="0" max="0.9" step="any">
+						<input type="range" name="greenyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+			<div class="coordinates">
+				<p>Blue</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="bluexn" min="0" max="0.8" step="any">
+						<input type="range" name="bluexr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="blueyn" min="0" max="0.9" step="any">
+						<input type="range" name="blueyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+			<div class="coordinates">
+				<p>White</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="whitexn" min="0" max="0.8" step="any">
+						<input type="range" name="whitexr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="whiteyn" min="0" max="0.9" step="any">
+						<input type="range" name="whiteyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+		</form>
+		<form id="to">
+			<h2>To colorspace</h2>
+			<div class="coordinates">
+				<p>Red</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="redxn" min="0" max="0.8" step="any">
+						<input type="range" name="redxr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="redyn" min="0" max="0.9" step="any">
+						<input type="range" name="redyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+			<div class="coordinates">
+				<p>Green</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="greenxn" min="0" max="0.8" step="any">
+						<input type="range" name="greenxr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="greenyn" min="0" max="0.9" step="any">
+						<input type="range" name="greenyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+			<div class="coordinates">
+				<p>Blue</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="bluexn" min="0" max="0.8" step="any">
+						<input type="range" name="bluexr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="blueyn" min="0" max="0.9" step="any">
+						<input type="range" name="blueyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+			<div class="coordinates">
+				<p>White</p>
+				<label class="controls">x
+					<div class="input">
+						<input type="number" name="whitexn" min="0" max="0.8" step="any">
+						<input type="range" name="whitexr" min="0" max="0.8" step="0.001">
+					</div>
+				</label>
+				<label class="controls">y
+					<div class="input">
+						<input type="number" name="whiteyn" min="0" max="0.9" step="any">
+						<input type="range" name="whiteyr" min="0" max="0.9" step="0.001">
+					</div>
+				</label>
+			</div>
+		</form>
+	</main>
+	<footer>
+		<p>© Colin Griffith
+	</footer>
+</body>

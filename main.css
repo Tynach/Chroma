@@ -1,0 +1,54 @@
+body {
+	display: inline-block;
+	width: 40em;
+	font-size: 0.8em;
+	font-family: Roboto, sans-serif;
+}
+
+canvas {
+	display: block;
+}
+
+form {
+	display: inline-block;
+}
+
+div.coordinates {
+	width: 19em;
+}
+
+div.coordinates > p {
+	margin: 0.5em 0;
+}
+
+label.controls {
+	vertical-align: calc(-2px);
+}
+
+div.input {
+	display: inline-block;
+	margin-right: 1em;
+	width: calc(50% - 2em);
+	vertical-align: top;
+}
+
+div.input > input {
+	margin: 0;
+	padding: 1px;
+	width: 100%;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+input[type="number"] {
+	border: 1px solid #bcbcbc;
+	border-radius: 2px;
+}
+
+input[type="number"]::-webkit-inner-spin-button {
+	opacity: 1;
+}
+
+input[type="range"] {
+	border: 1px solid transparent;
+}
