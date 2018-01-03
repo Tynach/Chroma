@@ -71,18 +71,18 @@ function draw() {
 	let to = document.querySelector("#to").elements;
 
 	state.from.primaries = primaries(
-		from["redxn"].value, from["redyn"].value,
-		from["greenxn"].value, from["greenyn"].value,
-		from["bluexn"].value, from["blueyn"].value
+		from["redxn"].valueAsNumber, from["redyn"].valueAsNumber,
+		from["greenxn"].valueAsNumber, from["greenyn"].valueAsNumber,
+		from["bluexn"].valueAsNumber, from["blueyn"].valueAsNumber
 	);
-	state.from.white = chromaCoords(from["whitexn"].value, from["whiteyn"].value);
+	state.from.white = chromaCoords(from["whitexn"].valueAsNumber, from["whiteyn"].valueAsNumber);
 
 	state.to.primaries = primaries(
-		to["redxn"].value, to["redyn"].value,
-		to["greenxn"].value, to["greenyn"].value,
-		to["bluexn"].value, to["blueyn"].value
+		to["redxn"].valueAsNumber, to["redyn"].valueAsNumber,
+		to["greenxn"].valueAsNumber, to["greenyn"].valueAsNumber,
+		to["bluexn"].valueAsNumber, to["blueyn"].valueAsNumber
 	);
-	state.to.white = chromaCoords(to["whitexn"].value, to["whiteyn"].value);
+	state.to.white = chromaCoords(to["whitexn"].valueAsNumber, to["whiteyn"].valueAsNumber);
 
 	ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
