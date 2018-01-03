@@ -117,11 +117,19 @@ function drawPrimaries(ctx, prims) {
 	const w = ctx.canvas.width;
 	const h = ctx.canvas.height;
 
+	let x = (prims[6] + (0.9*w/h - 0.8)/2)*h/0.9;
+	let y = h*(1 - prims[7]/0.9);
+
 	ctx.beginPath();
-	ctx.moveTo((prims[0]+(0.9*w/h-0.8)/2.0)*h/0.9, h-prims[1]*h/0.9);
-	ctx.lineTo((prims[3]+(0.9*w/h-0.8)/2.0)*h/0.9, h-prims[4]*h/0.9);
-	ctx.lineTo((prims[6]+(0.9*w/h-0.8)/2.0)*h/0.9, h-prims[7]*h/0.9);
-	ctx.lineTo((prims[0]+(0.9*w/h-0.8)/2.0)*h/0.9, h-prims[1]*h/0.9);
+	ctx.moveTo(x, y);
+
+	for (let i = 0; i < 9; i += 3) {
+		x = (prims[i] + (0.9*w/h - 0.8)/2)*h/0.9;
+		y = h*(1 - prims[i+1]/0.9);
+
+		ctx.lineTo(x, y);
+	}
+
 	ctx.stroke();
 }
 
