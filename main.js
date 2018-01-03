@@ -1,5 +1,10 @@
 "use strict"
 
+var state = {
+	from: JSON.parse(JSON.stringify(Srgb)),
+	to: JSON.parse(JSON.stringify(Srgb))
+}
+
 function loadShader(gl, type, source) {
 	const shader = gl.createShader(type);
 
@@ -86,8 +91,8 @@ function draw() {
 
 	ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
-	drawPrimaries(state.ctx, state.from.primaries);
-	drawPrimaries(state.ctx, state.to.primaries);
+	drawPrimaries(state.ctx, state.from.primaries, state.bounds);
+	drawPrimaries(state.ctx, state.to.primaries, state.bounds);
 
 	gl.bindTexture(gl.TEXTURE_2D, state.lines);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, lineCanvas.width, lineCanvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, lineCanvas);
@@ -104,6 +109,7 @@ function draw() {
 
 	gl.useProgram(program.program);
 
+	gl.uniform2fv(program.uniforms.bounds, state.bounds);
 	gl.uniform2fv(program.uniforms.dispRes, dispRes);
 
 	sendColorspace(gl, program.uniforms.from, state.from);
@@ -113,19 +119,19 @@ function draw() {
 	requestAnimationFrame(draw);
 }
 
-function drawPrimaries(ctx, prims) {
+function drawPrimaries(ctx, prims, bounds) {
 	const w = ctx.canvas.width;
 	const h = ctx.canvas.height;
 
-	let x = (prims[6] + (0.9*w/h - 0.8)/2)*h/0.9;
-	let y = h*(1 - prims[7]/0.9);
+	let x = (prims[6] + (bounds[1]*w/h - bounds[0])/2)*h/bounds[1];
+	let y = h*(1 - prims[7]/bounds[1]);
 
 	ctx.beginPath();
 	ctx.moveTo(x, y);
 
 	for (let i = 0; i < 9; i += 3) {
-		x = (prims[i] + (0.9*w/h - 0.8)/2)*h/0.9;
-		y = h*(1 - prims[i+1]/0.9);
+		x = (prims[i] + (bounds[1]*w/h - bounds[0])/2)*h/bounds[1];
+		y = h*(1 - prims[i+1]/bounds[1]);
 
 		ctx.lineTo(x, y);
 	}
@@ -136,6 +142,8 @@ function drawPrimaries(ctx, prims) {
 window.addEventListener("DOMContentLoaded", function() {
 	const glCanvas = document.querySelector("#glCanvas");
 	const lineCanvas = document.createElement('canvas');
+
+	const bounds = [0.8, 0.9];
 
 	const w = glCanvas.width;
 	const h = glCanvas.height;
@@ -193,6 +201,7 @@ window.addEventListener("DOMContentLoaded", function() {
 			vertex: gl.getAttribLocation(shaderProgram, 'vertex')
 		},
 		uniforms: {
+			bounds: gl.getUniformLocation(shaderProgram, 'bounds'),
 			dispRes: gl.getUniformLocation(shaderProgram, 'dispRes'),
 			lines: gl.getUniformLocation(shaderProgram, 'lines'),
 			from: fromColorspace,
@@ -202,6 +211,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
 	const buffers = initBuffers(gl);
 
+	state.bounds = bounds;
 	state.ctx = ctx;
 	state.lines = lines;
 	state.lineCanvas = lineCanvas;

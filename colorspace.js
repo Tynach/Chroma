@@ -54,8 +54,3 @@ const Ntsc = new colorspace(primariesNtsc, whiteC, gam170m);
 const Srgb = new colorspace(primaries709, whiteD65, gamSrgb);
 const Rec709 = new colorspace(primaries709, whiteD65, gam170m);
 const Rec2020 = new colorspace(primaries2020, whiteD65, gam170m);
-
-var state = {
-	from: JSON.parse(JSON.stringify(Srgb)),
-	to: JSON.parse(JSON.stringify(Srgb))
-}

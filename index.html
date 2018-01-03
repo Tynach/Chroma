@@ -58,6 +58,7 @@ struct rgb_space {
 };
 
 out vec4 fragColor;
+uniform vec2 bounds;
 uniform vec2 dispRes;
 uniform sampler2D lines;
 
@@ -185,7 +186,6 @@ vec4 convert(vec4 color)
 
 void main()
 {
-	const vec2 bounds = vec2(0.8, 0.9);
 	fragColor.xy = gl_FragCoord.xy*bounds.y/dispRes.y;
 	fragColor.x -= (bounds.y*dispRes.x/dispRes.y - bounds.x)/2.0;
 	fragColor.z = 1.0 - fragColor.x - fragColor.y;
