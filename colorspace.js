@@ -5,11 +5,11 @@ function chromaCoords(x, y) {
 }
 
 function primaries(rx, ry, gx, gy, bx, by) {
-	var r = chromaCoords(rx, ry);
-	var g = chromaCoords(gx, gy);
-	var b = chromaCoords(bx, by);
-
-	return r.concat(g).concat(b);
+	return [
+		rx, ry, 1 - rx - ry,
+		gx, gy, 1 - gx - gy,
+		bx, by, 1 - bx - by
+	];
 }
 
 function transfer(power, off, slope, toLinCutoff, toGamCutoff) {
