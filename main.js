@@ -145,6 +145,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
 	const gl = glCanvas.getContext("webgl2");
 	const ctx = lineCanvas.getContext("2d");
+	ctx.imageSmoothingQuality = "high";
 
 	if (!gl) {
 		console.log("WebGL buggered out!");
