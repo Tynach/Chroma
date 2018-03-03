@@ -1,3 +1,5 @@
+"use strict";
+
 /******************************************************************************
  * This file defines several common colorspace standards. Make sure that you  *
  * first load the 'colorspace.js' file, as this file depends on its contents. *
