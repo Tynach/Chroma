@@ -142,7 +142,7 @@ void gamutScale(inout vec4 color, const float luma)
 
 void convert(inout vec4 color)
 {
-	float luma = 1.001;
+	float luma = 0.9999;
 
 	mat3 toRGB = xyzToRgb(from);
 	mat3 toXYZ = rgbToXyz(from);
