@@ -171,10 +171,12 @@ void convert(inout vec4 color)
 	// Rescale colors to avoid overly bright hues (which are desaturated by
 	// gamut scaling)
 	mat3 newPrims = convert*mat3(1);
+	vec3 newWhite = convert*vec3(1);
 	color.rgb /=
 		max(newPrims[0].r, max(newPrims[0].g, max(newPrims[0].b,
 		max(newPrims[1].r, max(newPrims[1].g, max(newPrims[1].b,
-		max(newPrims[2].r, max(newPrims[2].g, newPrims[2].b))))))));
+		max(newPrims[2].r, max(newPrims[2].g, max(newPrims[2].b,
+		max(newWhite.r, max(newWhite.g, newWhite.b)))))))))));
 
 	// Grab new luma values to emulate display brightness more accurately
 	luma = (toXYZ*color.rgb).y;
