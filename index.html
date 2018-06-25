@@ -67,26 +67,26 @@ uniform rgb_space from;
 uniform rgb_space to;
 
 
-#define \
-diag(v)\
+#define diag(v)\
 	mat3(\
 		v.x, 0.0, 0.0,\
 		0.0, v.y, 0.0,\
 		0.0, 0.0, v.z)
 
+// Calculate XYZ values for a color at full brightness
+#define Bright(white)\
+	(white)/(white.y)
+
 // Creates a conversion matrix that turns RGB colors into XYZ colors
-#define \
-rgbToXyz(space)\
-	space.primaries*diag((inverse(space.primaries)*(space.white/space.white.y)))
+#define rgbToXyz(space)\
+	(space).primaries*diag((inverse((space).primaries)*Bright(space.white)))
 
 // Creates a conversion matrix that turns XYZ colors into RGB colors
-#define \
-xyzToRgb(space)\
+#define xyzToRgb(space)\
 	inverse(rgbToXyz(space))
 
 // Creates a conversion matrix converts linear RGB colors from one colorspace to another
-#define \
-conversionMatrix(f, t)\
+#define conversionMatrix(f, t)\
 	xyzToRgb(t)*rgbToXyz(f)
 
 
@@ -95,7 +95,7 @@ conversionMatrix(f, t)\
  */
 
 // Converts RGB colors to a linear light scale
-vec4 toLinear(vec4 color, const transfer trc)
+void toLinear(inout vec4 color, const transfer trc)
 {
 	if (trc.tvRange) {
 		color = color*85.0/73.0 - 16.0/219.0;
@@ -109,12 +109,10 @@ vec4 toLinear(vec4 color, const transfer trc)
 
 	color = mix(higher, lower, cutoff);
 	color = mix(color, neg, negCutoff);
-
-	return color;
 }
 
 // Gamma-corrects RGB colors to be sent to a display
-vec4 toGamma(vec4 color, const transfer trc)
+void toGamma(inout vec4 color, const transfer trc)
 {
 	bvec4 cutoff = lessThan(color, vec4(trc.cutoffToGamma));
 	bvec4 negCutoff = lessThanEqual(color, vec4(-1.0*trc.cutoffToGamma));
@@ -128,12 +126,10 @@ vec4 toGamma(vec4 color, const transfer trc)
 	if (trc.tvRange) {
 		color = color*73.0/85.0 + 16.0/255.0;
 	}
-
-	return color;
 }
 
 // Scales a color to the closest in-gamut representation of that color
-vec4 gamutScale(vec4 color, const float luma)
+void gamutScale(inout vec4 color, const float luma)
 {
 	float low = min(color.r, min(color.g, min(color.b, 0.0)));
 	float high = max(color.r, max(color.g, max(color.b, 1.0)));
@@ -142,11 +138,9 @@ vec4 gamutScale(vec4 color, const float luma)
 	float highScale = (high - 1.0)/(high - luma);
 	float scale = max(lowScale, highScale);
 	color.rgb += scale*(luma - color.rgb);
-
-	return color;
 }
 
-vec4 convert(vec4 color)
+void convert(inout vec4 color)
 {
 	float luma = 1.001;
 
@@ -172,7 +166,15 @@ vec4 convert(vec4 color)
 	// Wikipedia's description for one of their chromaticity diagrams claims
 	// that the top left should have more cyan than most charts do. This
 	// is solved by scaling out-of-gamut colors to be in-gamut
-	color = gamutScale(color, luma);
+	gamutScale(color, luma);
+
+	// Rescale colors to avoid overly bright hues (which are desaturated by
+	// gamut scaling)
+	mat3 newPrims = convert*mat3(1);
+	color.rgb /=
+		max(newPrims[0].r, max(newPrims[0].g, max(newPrims[0].b,
+		max(newPrims[1].r, max(newPrims[1].g, max(newPrims[1].b,
+		max(newPrims[2].r, max(newPrims[2].g, newPrims[2].b))))))));
 
 	// Grab new luma values to emulate display brightness more accurately
 	luma = (toXYZ*color.rgb).y;
@@ -180,9 +182,7 @@ vec4 convert(vec4 color)
 	// Convert from one colorspace to another, to show how one display
 	// might show the colorspace of another
 	color.rgb = convert*color.rgb;
-	color = gamutScale(color, luma);
-
-	return color;
+	gamutScale(color, luma);
 }
 
 void main()
@@ -192,12 +192,12 @@ void main()
 	fragColor.z = 1.0 - fragColor.x - fragColor.y;
 	fragColor.a = 1.0;
 
-	fragColor = convert(fragColor);
+	convert(fragColor);
 
 	vec4 texColor = texture(lines, gl_FragCoord.xy/dispRes);
 
 	fragColor.rgb = texColor.a*texColor.rgb + (1.0 - texColor.a)*fragColor.rgb;
-	fragColor = toGamma(fragColor, to.trc);
+	toGamma(fragColor, to.trc);
 }
 </script>
 <link rel="stylesheet" href="main.css" type="text/css">
