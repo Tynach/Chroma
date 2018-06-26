@@ -153,15 +153,15 @@ void convert(inout vec4 color)
 	color.rgb = toRGB*color.xyz;
 
 	// Max normalization
-	//color.rgb /= max(color.r, max(color.g, color.b));
+	color.rgb /= max(color.r, max(color.g, color.b));
 
 	// Standard Euclidian normalization (equivalent to 'norm = 2.0' below)
 	//color.rgb = normalize(color.rgb);
 
 	// Custom normalization for brighter white point
 	// Wikipedia's chart roughly uses 'norm = 5.0'
-	const float norm = 4.0;
-	color.rgb /= pow(dot(pow(abs(color.rgb), vec3(norm)), vec3(1.0)), 1.0/norm);
+	//const float norm = 4.0;
+	//color.rgb /= pow(dot(pow(abs(color.rgb), vec3(norm)), vec3(1.0)), 1.0/norm);
 
 	// Wikipedia's description for one of their chromaticity diagrams claims
 	// that the top left should have more cyan than most charts do. This
